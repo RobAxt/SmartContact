@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <Homie.h>
 #include <Timer.h>
-#include "contactNode.hpp"
+#include "ContactNode.hpp"
 #include "VinNode.hpp"
 
 #define FW_NAME "smart-contact"
@@ -17,13 +17,18 @@ void prepareSleep();
 
 ContactNode contactNode;
 VinNode inputVoltage(VinNode::INTERVAL);
+Timer timer;
 
 void setup() {
   Serial.begin(74880,SERIAL_8N1,SERIAL_TX_ONLY);
   Serial << endl << endl;
+  Serial << F("Build Date and Time: ") << __DATE__ << " & " << __TIME__ << endl;
 
   Homie.disableLedFeedback();
   Homie.disableResetTrigger();
+  //Homie.setSetupFunction([](){});
+  Homie.setLoopFunction([](){ timer.update(); });
+  //Homie.setBroadcastHandler([](const String& level, const String& value){});
   Homie.onEvent(onHomieEvent);
   Homie_setFirmware(FW_NAME, FW_VERSION); // The underscore is not a typo! See Magic bytes
 
@@ -32,7 +37,6 @@ void setup() {
 
 void loop() {
   Homie.loop();
-  t.update();
 }
 
 void prepareSleep() {
@@ -43,7 +47,7 @@ void onHomieEvent(const HomieEvent& event) {
   switch(event.type) {
     case HomieEventType::MQTT_READY:
       Homie.getLogger() << "  ◦ MQTT connected, preparing for deep sleep after 100ms..." << endl;
-      t.after(100, prepareSleep);
+      timer.after(100, prepareSleep);
       break;
     case HomieEventType::READY_TO_SLEEP:
       Homie.getLogger() << "  ◦ Ready to sleep" << endl;
